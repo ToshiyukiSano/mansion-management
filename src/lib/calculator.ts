@@ -49,8 +49,21 @@ export function calculateRoles(roomNumber: number, currentAge: number): Calculat
 	// 理事長までの年数を計算（循環を考慮）
 	const yearsUntilChairperson = (userRoomIndex - chairpersonIndex + rooms.length) % rooms.length;
 
-	// 会計までの年数を計算（循環を考慮）
-	const yearsUntilAccountant = (userRoomIndex - accountantIndex + rooms.length) % rooms.length;
+	// 会計までの年数を計算（逆順・理事長との兼務回避シミュレーション）
+	let yearsUntilAccountant = -1;
+	let acctPointer = accountantIndex;
+	for (let year = 0; year < rooms.length * 4; year++) {
+		const chairIdx = (chairpersonIndex + year) % rooms.length;
+		if (acctPointer === chairIdx) {
+			// 理事長と衝突 → 会計をスキップ
+			acctPointer = (acctPointer - 1 + rooms.length) % rooms.length;
+		}
+		if (acctPointer === userRoomIndex) {
+			yearsUntilAccountant = year;
+			break;
+		}
+		acctPointer = (acctPointer - 1 + rooms.length) % rooms.length;
+	}
 
 	return {
 		roomNumber,
