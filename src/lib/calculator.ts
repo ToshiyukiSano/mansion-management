@@ -16,6 +16,15 @@ export const currentChairperson = 201; // 理事長
 export const currentAccountant = 303;  // 会計
 
 /**
+ * 年度別スケジュールの型定義
+ */
+export interface YearSchedule {
+	year: number;            // 0 = 今年
+	chairpersonRoom: number; // 理事長の部屋番号
+	accountantRoom: number;  // 会計の部屋番号
+}
+
+/**
  * 計算結果の型定義
  */
 export interface CalculationResult {
@@ -27,6 +36,7 @@ export interface CalculationResult {
 	ageAsAccountant: number;
 	currentChairpersonRoom: number;
 	currentAccountantRoom: number;
+	schedule: YearSchedule[];
 }
 
 /**
@@ -50,19 +60,50 @@ export function calculateRoles(roomNumber: number, currentAge: number): Calculat
 	const yearsUntilChairperson = (userRoomIndex - chairpersonIndex + rooms.length) % rooms.length;
 
 	// 会計までの年数を計算（逆順・理事長との兼務回避シミュレーション）
+	// 同時に年度別スケジュールを構築
+	const schedule: YearSchedule[] = [];
 	let yearsUntilAccountant = -1;
+	let foundAccountant = false;
 	let acctPointer = accountantIndex;
+	let deferredPerson = -1; // 繰り延べされた人のインデックス
+
 	for (let year = 0; year < rooms.length * 4; year++) {
 		const chairIdx = (chairpersonIndex + year) % rooms.length;
-		if (acctPointer === chairIdx) {
-			// 理事長と衝突 → 会計をスキップ
+		let actualAcctIdx: number;
+
+		if (deferredPerson !== -1) {
+			// 前年に繰り延べされた人が会計を担当
+			actualAcctIdx = deferredPerson;
+			deferredPerson = -1;
+			// acctPointerは進めない（繰り延べ消化のため）
+		} else {
+			if (acctPointer === chairIdx) {
+				// 衝突：この人を来年に繰り延べ、代わりに次の人が担当
+				deferredPerson = acctPointer;
+				acctPointer = (acctPointer - 1 + rooms.length) % rooms.length;
+				actualAcctIdx = acctPointer;
+			} else {
+				actualAcctIdx = acctPointer;
+			}
+			// ポインタを次へ進める（代行者も通常者も同様に消化済み）
 			acctPointer = (acctPointer - 1 + rooms.length) % rooms.length;
 		}
-		if (acctPointer === userRoomIndex) {
+
+		schedule.push({
+			year,
+			chairpersonRoom: rooms[chairIdx],
+			accountantRoom: rooms[actualAcctIdx]
+		});
+
+		if (actualAcctIdx === userRoomIndex && !foundAccountant) {
 			yearsUntilAccountant = year;
+			foundAccountant = true;
+		}
+
+		// 両方の役職が見つかったらループ終了
+		if (foundAccountant && year >= yearsUntilChairperson) {
 			break;
 		}
-		acctPointer = (acctPointer - 1 + rooms.length) % rooms.length;
 	}
 
 	return {
@@ -73,7 +114,8 @@ export function calculateRoles(roomNumber: number, currentAge: number): Calculat
 		yearsUntilAccountant,
 		ageAsAccountant: currentAge + yearsUntilAccountant,
 		currentChairpersonRoom: currentChairperson,
-		currentAccountantRoom: currentAccountant
+		currentAccountantRoom: currentAccountant,
+		schedule
 	};
 }
 

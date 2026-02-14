@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { rooms, calculateRoles, validateAge, type CalculationResult } from '$lib/calculator';
+	import { rooms, calculateRoles, validateAge, type CalculationResult, type YearSchedule } from '$lib/calculator';
 
 	let selectedRoom = $state<number | null>(null);
 	let currentAge = $state<number | null>(null);
@@ -213,6 +213,52 @@
 								<span class="text-2xl font-bold ml-2">{result.ageAsAccountant}歳</span>
 							</p>
 						{/if}
+					</div>
+				</div>
+
+				<!-- 年度別スケジュール表 -->
+				<div class="mt-6">
+					<h3 class="text-lg font-semibold text-gray-900 mb-3">年度別スケジュール</h3>
+					<div class="overflow-x-auto">
+						<table class="w-full text-sm border-collapse">
+							<thead>
+								<tr class="bg-gray-100">
+									<th class="px-4 py-2 text-left font-medium text-gray-700 border-b border-gray-200">年度</th>
+									<th class="px-4 py-2 text-left font-medium text-gray-700 border-b border-gray-200">理事長</th>
+									<th class="px-4 py-2 text-left font-medium text-gray-700 border-b border-gray-200">会計</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each result.schedule as entry, i}
+									{@const isUserChair = entry.chairpersonRoom === result.roomNumber}
+									{@const isUserAcct = entry.accountantRoom === result.roomNumber}
+									{@const isUserRow = isUserChair || isUserAcct}
+									<tr class="{isUserRow ? 'bg-yellow-50' : i % 2 === 1 ? 'bg-gray-50' : ''}">
+										<td class="px-4 py-2 border-b border-gray-100 text-gray-600">
+											{entry.year === 0 ? '今年' : `${entry.year}年後`}
+										</td>
+										<td class="px-4 py-2 border-b border-gray-100">
+											{#if isUserChair}
+												<span class="inline-block px-3 py-0.5 bg-blue-600 text-white text-xs font-medium rounded-full">
+													{entry.chairpersonRoom}号室
+												</span>
+											{:else}
+												<span class="text-gray-800">{entry.chairpersonRoom}号室</span>
+											{/if}
+										</td>
+										<td class="px-4 py-2 border-b border-gray-100">
+											{#if isUserAcct}
+												<span class="inline-block px-3 py-0.5 bg-green-600 text-white text-xs font-medium rounded-full">
+													{entry.accountantRoom}号室
+												</span>
+											{:else}
+												<span class="text-gray-800">{entry.accountantRoom}号室</span>
+											{/if}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
 					</div>
 				</div>
 			</div>
